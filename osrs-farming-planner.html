@@ -742,6 +742,10 @@ let nameToId={};
 let nameToIcon={}; // item name (lowercase) -> exact wiki image filename, e.g. "Varrock teleport.png"
 let prices={};
 let pricesLoaded=false;
+const GE_TAX=0.02;
+const GE_TAX_CAP=5000000;
+const geTax=price=>Math.min(Math.floor(Math.max(0,price)*GE_TAX),GE_TAX_CAP);
+const afterGeTax=price=>Math.max(0,price-geTax(price));
 
 function priceOf(name){
   if(!name) return 0;
@@ -755,7 +759,7 @@ function sellPriceOf(name){
   const id=resolveItemId(name);
   if(!id||!prices[id]) return 0;
   const p=prices[id];
-  return p.low || p.high || 0; // selling estimate uses instant-sell ('low') side
+  return afterGeTax(p.low || p.high || 0); // instant-sell ('low') less GE tax
 }
 
 async function loadPrices(){

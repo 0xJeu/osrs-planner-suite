@@ -42,7 +42,7 @@ mapData.forEach(i => { nameToId[i.name.toLowerCase()] = i.id; }); // number vs s
 
 **Do NOT send a custom User-Agent header** — browsers block this on cross-origin fetch, causing silent CORS preflight failures.
 
-**GE Tax:** `sellPriceOf()` deducts 1% GE tax: `Math.min(5000000, Math.max(1, Math.floor(price * 0.01)))`.
+**GE Tax:** Since 29 May 2025, most Grand Exchange sales are taxed at 2% per item, rounded down and capped at 5,000,000 gp per item. Sales below 50 gp naturally round to zero tax. Calculator helpers use `Math.min(5000000, Math.floor(price * 0.02))`.
 
 **Price direction:** In the prices API:
 - `high` = instant buy price (what buyers pay) — use when calculating ingredient costs

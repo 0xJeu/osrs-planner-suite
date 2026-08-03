@@ -312,6 +312,10 @@ const HERBLORE_METHODS = {
 const WIKI_MAPPING='https://prices.runescape.wiki/api/v1/osrs/mapping';
 const WIKI_LATEST='https://prices.runescape.wiki/api/v1/osrs/latest';
 let nameToId={}, prices={}, nameToIcon={}, pricesLoaded=false;
+const GE_TAX=0.02;
+const GE_TAX_CAP=5000000;
+const geTax=price=>Math.min(Math.floor(Math.max(0,price)*GE_TAX),GE_TAX_CAP);
+const afterGeTax=price=>Math.max(0,price-geTax(price));
 
 function priceOf(name){
   if(!name) return 0;
@@ -324,9 +328,7 @@ function sellPriceOf(name){
   const id=nameToId[name.toLowerCase()];
   if(!id||!prices[id]) return 0;
   const raw = prices[id].low || prices[id].high || 0;
-  // Apply 1% GE tax on all sales (minimum 1gp, cap 5,000,000gp) — confirmed from wiki
-  const tax = Math.min(5000000, Math.max(1, Math.floor(raw * 0.01)));
-  return Math.max(0, raw - tax);
+  return afterGeTax(raw);
 }
 
 async function loadPrices(){
@@ -464,7 +466,7 @@ function updateStatusCard(){
 }
 
 // ── ROUTE GENERATION ────────────────────────────────────────────────────────────
-function buildRoute(startLevel, endLevel, speed){
+function buildRoute(startLevel, endLevel, speed, startingXp=xpForLevel(startLevel)){
   const methods=HERBLORE_METHODS[speed];
   const stops=[];
   let lvl=startLevel;
@@ -477,7 +479,7 @@ function buildRoute(startLevel, endLevel, speed){
     }
     const method=candidates.sort((a,b)=>b.maxLevel-a.maxLevel)[0];
     const stopEnd=Math.min(method.maxLevel,endLevel);
-    const xpStart=xpForLevel(lvl), xpEnd=xpForLevel(stopEnd);
+    const xpStart=lvl===startLevel?Math.max(xpForLevel(lvl),startingXp):xpForLevel(lvl), xpEnd=xpForLevel(stopEnd);
     const xpNeeded=xpEnd-xpStart;
     const actionsNeeded=Math.ceil(xpNeeded/method.xpPerAction);
     const hoursNeeded=actionsNeeded/method.actionsPerHr;
@@ -800,7 +802,7 @@ function generatePlan(){
     return;
   }
 
-  const stops=buildRoute(curLevel,targetLevelVal,currentSpeed);
+  const stops=buildRoute(curLevel,targetLevelVal,currentSpeed,playerXp);
   if(!stops.length){
     planArea.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">No route available for this level range and speed setting.</div>`;
     return;

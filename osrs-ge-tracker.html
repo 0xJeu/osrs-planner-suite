@@ -619,7 +619,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       <button class="action-btn" id="calcBtn">Calculate Profit</button>
       <div class="calc-results" id="calcResults">
         <div class="result-row"><span class="result-label">Buy Total</span><span class="result-value" id="rBuyTotal">—</span></div>
-        <div class="result-row"><span class="result-label">GE Tax (1%)</span><span class="result-value" id="rTax">—</span></div>
+        <div class="result-row"><span class="result-label">GE Tax (2%)</span><span class="result-value" id="rTax">—</span></div>
         <div class="result-row"><span class="result-label">Sell (after tax)</span><span class="result-value" id="rSellNet">—</span></div>
         <div class="result-row"><span class="result-label">Profit / item</span><span class="result-value" id="rProfitEach">—</span></div>
         <div class="result-row"><span class="result-label">Total Profit</span><span class="result-value" id="rProfitTotal">—</span></div>
@@ -800,9 +800,20 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 // ── CONSTANTS ────────────────────────────────────────────
 const WIKI_LATEST  = 'https://prices.runescape.wiki/api/v1/osrs/latest';
 const WIKI_MAPPING = 'https://prices.runescape.wiki/api/v1/osrs/mapping';
-const H            = {'User-Agent':'GE-Tracker-App/1.0'};
-const GE_TAX       = 0.01;
+const GE_TAX       = 0.02;
 const GE_TAX_CAP   = 5_000_000;
+const geTax = price => Math.min(Math.floor(Math.max(0, price) * GE_TAX), GE_TAX_CAP);
+const afterGeTax = price => Math.max(0, price - geTax(price));
+function grossSellPriceForNet(net){
+  net=Math.max(0,Math.ceil(net));
+  let low=net, high=net+GE_TAX_CAP+1;
+  while(low<high){
+    const mid=Math.floor((low+high)/2);
+    if(afterGeTax(mid)>=net) high=mid;
+    else low=mid+1;
+  }
+  return low;
+}
 
 // ── STATE ────────────────────────────────────────────────
 let allItems={}, prices={}, watchlist=[], alerts=[], recentViewed=[];
@@ -892,7 +903,7 @@ function playAlert(){
 async function boot(){
   try{
     const[mapRes,priceRes]=await Promise.all([
-      fetch(WIKI_MAPPING,{headers:H}),fetch(WIKI_LATEST,{headers:H})
+      fetch(WIKI_MAPPING),fetch(WIKI_LATEST)
     ]);
     const mapData=await mapRes.json(),priceData=await priceRes.json();
     mapData.forEach(i=>{allItems[i.id]=i;});
@@ -1150,7 +1161,7 @@ async function loadCmpCandles(id){
   try{
     const now=Date.now()/1000,cutoff=now-7*24*3600;
     const url=`https://prices.runescape.wiki/api/v1/osrs/timeseries?timestep=24h&id=${id}`;
-    const res=await fetch(url,{headers:H});const data=await res.json();
+    const res=await fetch(url);const data=await res.json();
     cmpCandles[id]=parseSeries((data.data||[]).filter(d=>d.timestamp>=cutoff));
   }catch(e){cmpCandles[id]=[];}
 }
@@ -1206,7 +1217,7 @@ async function loadMarginHistory(id){
   try{
     const now=Date.now()/1000,cutoff=now-7*24*3600;
     const url=`https://prices.runescape.wiki/api/v1/osrs/timeseries?timestep=6h&id=${id}`;
-    const res=await fetch(url,{headers:H});const data=await res.json();
+    const res=await fetch(url);const data=await res.json();
     const series=(data.data||[]).filter(d=>d.timestamp>=cutoff&&d.avgHighPrice&&d.avgLowPrice)
       .map(d=>({t:d.timestamp*1000,margin:d.avgHighPrice-d.avgLowPrice}));
     if(!series.length){canvas.style.display='none';emptyEl.textContent='No margin data available.';emptyEl.style.display='block';return;}
@@ -1328,6 +1339,7 @@ async function loadItem(id){
   if(p.low)document.getElementById('portBuyPrice').value=p.low;
   document.getElementById('logItemName').value=info.name;
   document.getElementById('logItemId').value=id;
+  // Flip logging models patient offers: buy on the low side, sell on the high side.
   if(p.low)document.getElementById('logBuyPrice').value=p.low;
   if(p.high)document.getElementById('logSellPrice').value=p.high;
   if(info.limit)document.getElementById('logQty').value=info.limit;
@@ -1343,7 +1355,7 @@ async function loadItem(id){
 document.getElementById('calcBtn').addEventListener('click',()=>{
   const buyP=parseFloat(document.getElementById('calcBuy').value),sellP=parseFloat(document.getElementById('calcSell').value),qty=parseInt(document.getElementById('calcQty').value)||1;
   if(!buyP||!sellP)return;
-  const taxEach=Math.min(Math.floor(sellP*GE_TAX),GE_TAX_CAP),profEach=(sellP-taxEach)-buyP,profTotal=profEach*qty,pos=profTotal>=0;
+  const taxEach=geTax(sellP),profEach=afterGeTax(sellP)-buyP,profTotal=profEach*qty,pos=profTotal>=0;
   document.getElementById('rBuyTotal').textContent=(buyP*qty).toLocaleString()+' gp';
   document.getElementById('rTax').textContent=(taxEach*qty).toLocaleString()+' gp';
   document.getElementById('rSellNet').textContent=((sellP-taxEach)*qty).toLocaleString()+' gp';
@@ -1356,7 +1368,7 @@ document.getElementById('calcBtn').addEventListener('click',()=>{
 document.getElementById('revCalcBtn').addEventListener('click',()=>{
   const tp=parseFloat(document.getElementById('revProfit').value),buyP=parseFloat(document.getElementById('revBuy').value);
   if(!tp||!buyP)return;
-  const sell=Math.ceil((buyP+tp)/(1-GE_TAX)),tax=Math.min(Math.floor(sell*GE_TAX),GE_TAX_CAP);
+  const sell=grossSellPriceForNet(buyP+tp),tax=geTax(sell);
   document.getElementById('revSellPrice').textContent=sell.toLocaleString()+' gp';
   document.getElementById('revTax').textContent=tax.toLocaleString()+' gp';
   document.getElementById('revResults').classList.add('show');
@@ -1476,7 +1488,7 @@ async function refreshPrices(manual){
   const btn=document.getElementById('refreshBtn');
   if(btn){btn.disabled=true;btn.classList.add('spinning');}
   try{
-    const res=await fetch(WIKI_LATEST,{headers:H});
+    const res=await fetch(WIKI_LATEST);
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
     Object.entries(data.data).forEach(([id,p])=>{prices[id]=p;});
@@ -1643,7 +1655,7 @@ async function loadChart(id,tf){
     else if(tf==='1year'){step='24h';cutoff=now-365*24*3600;merge=1;}
     else{step='24h';cutoff=now-90*24*3600;merge=1;}
     const url=`https://prices.runescape.wiki/api/v1/osrs/timeseries?timestep=${step}&id=${id}`;
-    const res=await fetch(url,{headers:H});const data=await res.json();
+    const res=await fetch(url);const data=await res.json();
     let filtered=(data.data||[]).filter(d=>d.timestamp>=cutoff);
     if(customTo) filtered=filtered.filter(d=>d.timestamp<=customTo);
     const raw=parseSeries(filtered);
@@ -2182,7 +2194,7 @@ document.getElementById('addFlipBtn').addEventListener('click',()=>{
   const sellPrice=parseFloat(document.getElementById('logSellPrice').value);
   const qty=parseInt(document.getElementById('logQty').value)||1;
   if(!itemId||!buyPrice||!sellPrice){showToast('Missing info','Fill in all fields.');return;}
-  const taxEach=Math.min(Math.floor(sellPrice*GE_TAX),GE_TAX_CAP);
+  const taxEach=geTax(sellPrice);
   const profit=((sellPrice-taxEach)-buyPrice)*qty;
   flipLog.unshift({id:++flipLogIdSeq,itemId,itemName,buyPrice,sellPrice,qty,profit,tax:taxEach*qty,date:Date.now()});
   document.getElementById('logBuyPrice').value='';

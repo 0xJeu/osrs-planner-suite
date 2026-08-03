@@ -309,6 +309,10 @@ function levelForXp(xp){for(let l=99;l>=1;l--){if(xp>=XP_TABLE[l-1])return l;}re
 const WIKI_MAPPING='https://prices.runescape.wiki/api/v1/osrs/mapping';
 const WIKI_LATEST='https://prices.runescape.wiki/api/v1/osrs/latest';
 let nameToId={}, prices={}, nameToIcon={}, pricesLoaded=false;
+const GE_TAX=0.02;
+const GE_TAX_CAP=5000000;
+const geTax=price=>Math.min(Math.floor(Math.max(0,price)*GE_TAX),GE_TAX_CAP);
+const afterGeTax=price=>Math.max(0,price-geTax(price));
 
 function priceOf(name){
   if(!name) return 0;
@@ -321,8 +325,7 @@ function sellPriceOf(name){
   const id=nameToId[name.toLowerCase()];
   if(!id||!prices[id]) return 0;
   const raw = prices[id].low || prices[id].high || 0;
-  const tax = Math.min(5000000, Math.max(1, Math.floor(raw * 0.01))); // 1% GE tax, min 1gp, cap 5M
-  return Math.max(0, raw - tax);
+  return afterGeTax(raw);
 }
 // Icon resolution — uses the wiki mapping's own `icon` filename, with a "(tablet)" name
 // fallback for the handful of items that are GE-listed only under a tablet-suffixed name.

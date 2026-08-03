@@ -234,7 +234,10 @@ tr:hover td{background:var(--surface2);}
 // ── CONSTANTS ────────────────────────────────────────────
 const WIKI_LATEST  = 'https://prices.runescape.wiki/api/v1/osrs/latest';
 const WIKI_MAPPING = 'https://prices.runescape.wiki/api/v1/osrs/mapping';
-const H = {'User-Agent':'GE-Tracker-Skills/1.0'};
+const GE_TAX = 0.02;
+const GE_TAX_CAP = 5_000_000;
+const geTax = price => Math.min(Math.floor(Math.max(0, price) * GE_TAX), GE_TAX_CAP);
+const afterGeTax = price => Math.max(0, price - geTax(price));
 const iconUrl = id => `https://secure.runescape.com/m=itemdb_oldschool/obj_sprite.gif?id=${id}`;
 const fmt = n => { if(!n&&n!==0)return'—'; if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K'; return Math.round(n).toLocaleString(); };
 // GP/XP always shown with exactly one decimal place, e.g. "4.2" or "-11.8" — never rounded to a whole number
@@ -572,8 +575,8 @@ let nameToId = {};
 async function boot(){
   try{
     const[mapRes,priceRes]=await Promise.all([
-      fetch(WIKI_MAPPING,{headers:H}),
-      fetch(WIKI_LATEST,{headers:H})
+      fetch(WIKI_MAPPING),
+      fetch(WIKI_LATEST)
     ]);
     const mapData=await mapRes.json(),priceData=await priceRes.json();
     mapData.forEach(i=>{
@@ -630,7 +633,7 @@ async function fetchAvgPrices(step){
 
     // Use the /1h, /6h, /24h summary endpoints which give volume-weighted averages
     const summaryStep = step==='1h'?'1h':step==='6h'?'6h':'24h';
-    const summaryRes=await fetch(`https://prices.runescape.wiki/api/v1/osrs/${summaryStep}`,{headers:H});
+    const summaryRes=await fetch(`https://prices.runescape.wiki/api/v1/osrs/${summaryStep}`);
     if(!summaryRes.ok)throw new Error('avg fetch failed');
     const summaryData=await summaryRes.json();
     avgPrices={};
@@ -657,17 +660,7 @@ document.getElementById('priceBasisSelect').addEventListener('change',async e=>{
 
 // ── PRICE HELPERS ─────────────────────────────────────────
 function buyPrice(id){
-  // Buy at the low (buy) side
-  if(priceBasis!=='spot'){
-    const a=avgPrices[id];
-    if(a&&a.low!=null) return a.low;
-    if(a&&a.high!=null) return a.high; // fallback to high if no low avg
-  }
-  const p=prices[id];
-  return p?(p.low||p.high||0):0;
-}
-function sellPrice(id){
-  // Sell at the high (sell) side
+  // `high` is the instant-buy side in the Wiki prices API.
   if(priceBasis!=='spot'){
     const a=avgPrices[id];
     if(a&&a.high!=null) return a.high;
@@ -675,6 +668,20 @@ function sellPrice(id){
   }
   const p=prices[id];
   return p?(p.high||p.low||0):0;
+}
+function sellPrice(id){
+  // `low` is the instant-sell side; GE tax is charged per output item.
+  let raw=0;
+  if(priceBasis!=='spot'){
+    const a=avgPrices[id];
+    if(a&&a.low!=null) raw=a.low;
+    else if(a&&a.high!=null) raw=a.high;
+  }
+  if(!raw){
+    const p=prices[id];
+    raw=p?(p.low||p.high||0):0;
+  }
+  return afterGeTax(raw);
 }
 function calcItem(item){
   const inputCost = item.inputs.reduce((s,i)=>s+buyPrice(i.id)*i.qty,0);
@@ -887,7 +894,7 @@ document.getElementById('refreshBtn').addEventListener('click',async()=>{
   document.getElementById('hUpdated').textContent='Refreshing…';
   try{
     const[priceRes]=await Promise.all([
-      fetch(WIKI_LATEST,{headers:H})
+      fetch(WIKI_LATEST)
     ]);
     const data=await priceRes.json();
     Object.entries(data.data).forEach(([id,p])=>{prices[id]=p;});

@@ -454,6 +454,25 @@ const PLANK_IDS = {
   'Teak plank':     {id:8780, name:'Teak plank'},
   'Mahogany plank': {id:8782, name:'Mahogany plank'},
 };
+const PLANK_FALLBACK_PRICES = {'Plank':470,'Oak plank':494,'Teak plank':1200,'Mahogany plank':2083};
+const WIKI_LATEST='https://prices.runescape.wiki/api/v1/osrs/latest';
+let plankPrices={};
+function plankBuyPrice(plank){
+  const id=String(PLANK_IDS[plank]?.id||'');
+  const live=plankPrices[id];
+  return (live&&(live.high||live.low))||PLANK_FALLBACK_PRICES[plank]||0;
+}
+async function loadPlankPrices(){
+  try{
+    const res=await fetch(WIKI_LATEST);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    plankPrices=data.data||{};
+    generatePlan();
+  }catch(e){
+    console.warn('Could not load live plank prices; using documented fallback prices.',e);
+  }
+}
 
 const CONSTRUCTION_METHODS = {
   fastest: [
@@ -490,7 +509,7 @@ const CONSTRUCTION_METHODS = {
 
 // ── ROUTE GENERATION ──────────────────────────────────────
 // Builds an ordered list of "stops" covering [startLevel, endLevel] using the chosen speed tier's methods.
-function buildRoute(startLevel, endLevel, speed){
+function buildRoute(startLevel, endLevel, speed, startingXp=xpForLevel(startLevel)){
   const methods = CONSTRUCTION_METHODS[speed];
   const stops = [];
   let lvl = startLevel;
@@ -509,15 +528,16 @@ function buildRoute(startLevel, endLevel, speed){
     const method = candidates.sort((a,b)=>b.maxLevel-a.maxLevel)[0];
     const stopEnd = Math.min(method.maxLevel, endLevel);
 
-    const xpStart = xpForLevel(lvl);
+    const xpStart = lvl===startLevel ? Math.max(xpForLevel(lvl),startingXp) : xpForLevel(lvl);
     const xpEnd = xpForLevel(stopEnd);
     const xpNeeded = xpEnd - xpStart;
     const hoursNeeded = xpNeeded / method.xpHr;
-    const totalCost = xpNeeded * method.costPerXp;
-
     // Materials: actions needed = xpNeeded / xpPerAction, planks needed = actions * planksPerAction
-    const actionsNeeded = xpNeeded / method.xpPerAction;
-    const planksNeeded = Math.ceil(actionsNeeded * method.planksPerAction);
+    const actionsNeeded = Math.ceil(xpNeeded / method.xpPerAction);
+    const planksNeeded = actionsNeeded * method.planksPerAction;
+    const plankUnitPrice = plankBuyPrice(method.plank);
+    const totalCost = planksNeeded * plankUnitPrice;
+    const costPerXp = xpNeeded>0 ? totalCost/xpNeeded : 0;
     // Butler trips needed = planks / items-per-trip (26), rounded up
     const butlerTrips = Math.ceil(planksNeeded / BUTLER_ITEMS_PER_TRIP);
     const butlerCost = Math.round(butlerTrips * BUTLER_GP_PER_TRIP);
@@ -529,7 +549,9 @@ function buildRoute(startLevel, endLevel, speed){
       xpNeeded,
       hoursNeeded,
       totalCost,
-      actionsNeeded: Math.ceil(actionsNeeded),
+      costPerXp,
+      plankUnitPrice,
+      actionsNeeded,
       planksNeeded,
       butlerTrips,
       butlerCost,
@@ -555,7 +577,7 @@ function generatePlan(){
     return;
   }
 
-  const stops = buildRoute(curLevel, targetLevelVal, currentSpeed);
+  const stops = buildRoute(curLevel, targetLevelVal, currentSpeed, playerXp);
   const accentMap = {fastest:'#e74c3c', balanced:'#c8a84b', cheapest:'#2ecc71'};
   const accent = accentMap[currentSpeed];
 
@@ -637,8 +659,6 @@ function generatePlan(){
     if(!plankTotals[stop.plank]) plankTotals[stop.plank] = {count:0, costPerXp:stop.costPerXp, itemId:PLANK_IDS[stop.plank]?.id};
     plankTotals[stop.plank].count += stop.planksNeeded;
   });
-  const plankCostGuess = {'Plank':470,'Oak plank':494,'Teak plank':1200,'Mahogany plank':2083}; // approximate GE prices, gp each — for shopping list estimate only
-
   let shoppingHtml = `<div class="shopping-list-wrap">
     <button class="shopping-list-toggle" id="shoppingToggle">
       <span>🛒 Full Materials Shopping List</span>
@@ -650,7 +670,7 @@ function generatePlan(){
         <tbody>`;
   let grandTotal = 0;
   Object.entries(plankTotals).forEach(([plankName, data])=>{
-    const unitPrice = plankCostGuess[plankName] || 0;
+    const unitPrice = plankBuyPrice(plankName);
     const lineTotal = unitPrice * data.count;
     grandTotal += lineTotal;
     shoppingHtml += `<tr>
@@ -672,7 +692,7 @@ function generatePlan(){
   shoppingHtml += `</tbody>
         <tfoot><tr><td colspan="4"><img class="summary-icon" src="https://secure.runescape.com/m=itemdb_oldschool/obj_sprite.gif?id=995" alt="" style="vertical-align:middle;margin-right:5px;">Grand Total</td><td class="mono">${grandTotal.toLocaleString()} gp</td></tr></tfoot>
       </table>
-      <p class="shopping-note">Plank prices are rough estimates — check live Grand Exchange prices before buying in bulk, as they fluctuate daily.</p>
+      <p class="shopping-note">Plank costs use the current instant-buy price when available, with documented fallback prices if the Wiki API is unavailable.</p>
     </div>
   </div>`;
 
@@ -694,6 +714,7 @@ function fmt(n){
 // Initial render
 updateStatusCard();
 generatePlan();
+loadPlankPrices();
 </script>
 </body>
 </html>
