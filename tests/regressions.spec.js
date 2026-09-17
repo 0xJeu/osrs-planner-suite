@@ -1,6 +1,42 @@
 const { test, expect } = require('@playwright/test');
 
+/**
+ * Stub for Wise Old Man, which these tests used to call for real.
+ *
+ * WOM is a free, volunteer-run community service. Firing live player lookups at it on
+ * every `npm test` is load they absorb for nothing, and it made the suite non-deterministic
+ * in the worst way: a run that tripped their rate limiter came back HTTP 429 and failed
+ * tests that had nothing to do with the change being tested. (That is not hypothetical -
+ * it is how this stub came to be written.)
+ *
+ * The fixture is deliberately shaped to exercise the pluralization edge case the first
+ * test is actually about: one group with exactly one member.
+ */
+const WOM_PLAYER = {
+  username: 'zezima',
+  displayName: 'Zezima',
+  type: 'regular',
+  latestSnapshot: { data: { skills: {}, bosses: {}, activities: {} } },
+};
+
+const WOM_GROUPS = [
+  { role: 'member', group: { id: 1, name: 'Solo Clan', memberCount: 1, verified: false } },
+  { role: 'administrator', group: { id: 2, name: 'Big Clan', memberCount: 250, verified: true } },
+];
+
+async function stubWiseOldMan(page) {
+  await page.route('https://api.wiseoldman.net/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/groups')) {
+      await route.fulfill({ json: WOM_GROUPS });
+      return;
+    }
+    await route.fulfill({ json: WOM_PLAYER });
+  });
+}
+
 test('index.html: WOM group member count is pluralized correctly', async ({ page }) => {
+  await stubWiseOldMan(page);
   await page.goto('/index.html');
   await page.fill('#statsUsername', 'Zezima');
   await page.click('#statsLookupBtn');
@@ -11,6 +47,7 @@ test('index.html: WOM group member count is pluralized correctly', async ({ page
 });
 
 test('index.html: player lookup links out to the correct RuneProfile page', async ({ page }) => {
+  await stubWiseOldMan(page);
   await page.goto('/index.html');
   await page.fill('#statsUsername', 'Zezima');
   await page.click('#statsLookupBtn');
@@ -89,6 +126,7 @@ const WOM_AUTOFETCH_STATUS_SELECTOR = {
 
 for (const [toolPage, statusSelector] of Object.entries(WOM_AUTOFETCH_STATUS_SELECTOR)) {
   test(`${toolPage}: auto-fetches WOM stats on load when a username is already saved`, async ({ page }) => {
+    await stubWiseOldMan(page);
     await page.goto(`/${toolPage}`);
     await page.evaluate(() => localStorage.setItem('osrs_wom_username', 'Zezima'));
     await page.reload();

@@ -274,24 +274,24 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 <div class="main">
   <nav class="skill-nav">
     <div class="skill-nav-title">OSRS Tools</div>
-    <button class="skill-btn" onclick="location.href='osrs-ge-tracker.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Grand_Exchange_logo.png" alt="">GE Tracker</button>
-    <button class="skill-btn" onclick="location.href='osrs-skill-profit.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Coins_10000.png" alt="">Skill Profits</button>
+    <button class="skill-btn" onclick="location.href='osrs-ge-tracker.html'"><img class="skill-icon-img" src="icons/Grand_Exchange_logo.png" alt="">GE Tracker</button>
+    <button class="skill-btn" onclick="location.href='osrs-skill-profit.html'"><img class="skill-icon-img" src="icons/Coins_10000.png" alt="">Skill Profits</button>
     <div class="skill-sep"></div>
-    <button class="skill-btn" onclick="location.href='osrs-training-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Construction_icon.png" alt="">Construction</button>
-    <button class="skill-btn active"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Farming_icon.png" alt="">Farming</button>
-    <button class="skill-btn" onclick="location.href='osrs-herblore-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Herblore_icon.png" alt="">Herblore</button>
-    <button class="skill-btn" onclick="location.href='osrs-prayer-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Prayer_icon.png" alt="">Prayer</button>
+    <button class="skill-btn" onclick="location.href='osrs-training-planner.html'"><img class="skill-icon-img" src="icons/Construction_icon.png" alt="">Construction</button>
+    <button class="skill-btn active"><img class="skill-icon-img" src="icons/Farming_icon.png" alt="">Farming</button>
+    <button class="skill-btn" onclick="location.href='osrs-herblore-planner.html'"><img class="skill-icon-img" src="icons/Herblore_icon.png" alt="">Herblore</button>
+    <button class="skill-btn" onclick="location.href='osrs-prayer-planner.html'"><img class="skill-icon-img" src="icons/Prayer_icon.png" alt="">Prayer</button>
     <div class="skill-sep"></div>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Smithing_icon.png" alt="">Smithing<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Fletching_icon.png" alt="">Fletching<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Cooking_icon.png" alt="">Cooking<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Crafting_icon.png" alt="">Crafting<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Smithing_icon.png" alt="">Smithing<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Fletching_icon.png" alt="">Fletching<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Cooking_icon.png" alt="">Cooking<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Crafting_icon.png" alt="">Crafting<span class="soon-badge">Soon</span></button>
   </nav>
 
   <div class="content">
     <div class="input-panel">
       <div class="input-panel-top">
-        <img class="skill-icon-large" src="https://oldschool.runescape.wiki/images/Farming_icon.png" alt="">
+        <img class="skill-icon-large" src="icons/Farming_icon.png" alt="">
         <div class="skill-title">Farming Training Planner</div>
       </div>
       <div class="skill-desc">Toggle the patches you have access to, set your level, pick a budget tier, and see exactly what to plant on your next run across every patch type.</div>
@@ -638,6 +638,21 @@ function resolveItemIcon(name){
   const tabletKey = `${key} (tablet)`;
   if(nameToIcon[tabletKey]) return nameToIcon[tabletKey];
   return null;
+}
+// Herb seed icon filenames, verified against the Wiki Prices mapping API's `icon` field.
+// These are NOT derivable from the tier name: the planner calls the herb "Ranarr weed" but the
+// seed item is "Ranarr seed", and every seed icon carries a "_5" suffix. The previous template
+// built "${name}_seed.png" and so 404'd on all fourteen herbs, every time a herb track rendered.
+const HERB_SEED_ICONS = {
+  'Guam':'Guam_seed_5.png', 'Marrentill':'Marrentill_seed_5.png', 'Tarromin':'Tarromin_seed_5.png',
+  'Harralander':'Harralander_seed_5.png', 'Ranarr weed':'Ranarr_seed_5.png', 'Toadflax':'Toadflax_seed_5.png',
+  'Irit weed':'Irit_seed_5.png', 'Avantoe':'Avantoe_seed_5.png', 'Kwuarm':'Kwuarm_seed_5.png',
+  'Snapdragon':'Snapdragon_seed_5.png', 'Cadantine':'Cadantine_seed_5.png', 'Lantadyme':'Lantadyme_seed_5.png',
+  'Dwarf weed':'Dwarf_weed_seed_5.png', 'Torstol':'Torstol_seed_5.png',
+};
+function herbSeedIcon(herbName){
+  const file = HERB_SEED_ICONS[herbName];
+  return file ? `icons/${file}` : '';
 }
 // Coins use denomination-specific sprite files on the wiki (Coins_5.png, Coins_25.png, Coins_100.png,
 // Coins_250.png, Coins_1000.png, Coins_10000.png) rather than one fixed icon — pick the closest
@@ -1290,12 +1305,12 @@ function renderRouteSection(activeTracks, picks){
       const qty = seen.get(slotKey);
       const isNoted = notedNames.has(slotKey);
       const iconSrc = name.toLowerCase()==='coins'
-        ? `https://oldschool.runescape.wiki/images/${coinIconFor(qty)}`
+        ? `icons/${coinIconFor(qty)}`
         : iconUrl(name);
       // Unstacked items (saplings) never show a quantity badge since each slot already represents exactly one unit.
       const qtyHtml = (!isUnstacked && qty>1) ? `<span class="inv-slot-qty">${fmtStackQty(qty)}</span>` : '';
       const inner = `${qtyHtml}
-        ${iconSrc ? `<img src="${iconSrc}" alt="${name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+        ${iconSrc ? `<img src="${iconSrc}" alt="${name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
         <span class="inv-slot-fallback" style="${iconSrc?'display:none;':'display:flex;'}">${name.slice(0,3)}</span>`;
       const slotCls = isNoted ? 'inv-slot inv-slot-noted' : 'inv-slot';
       const label = isNoted ? `${name} (noted)` : name;
@@ -1736,7 +1751,7 @@ function generatePlan(){
     totalCostPerRun += (priceOf(regularTier.seedName) + regularPayCost) * regularPatches;
     html += `<div class="track-card" style="--accent:${accent};">
       <div class="track-card-header">
-        <img class="track-card-icon" src="https://oldschool.runescape.wiki/images/${regularTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
+        <img class="track-card-icon" src="icons/${regularTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
         <div>
           <div class="track-card-name">${regularTier.name} Trees</div>
           <div class="track-card-level">Requires Lvl ${regularTier.level}</div>
@@ -1763,7 +1778,7 @@ function generatePlan(){
     totalCostPerRun += (priceOf(fruitTier.seedName) + fruitPayCost) * fruitPatches;
     html += `<div class="track-card" style="--accent:${accent};">
       <div class="track-card-header">
-        <img class="track-card-icon" src="https://oldschool.runescape.wiki/images/${fruitTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
+        <img class="track-card-icon" src="icons/${fruitTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
         <div>
           <div class="track-card-name">${fruitTier.name} Trees</div>
           <div class="track-card-level">Requires Lvl ${fruitTier.level}</div>
@@ -1792,7 +1807,7 @@ function generatePlan(){
     totalCostPerRun += hwCycleCost / hwCycleDays; // normalized to a daily-equivalent cost since this grows over multiple days
     html += `<div class="track-card" style="--accent:${accent};">
       <div class="track-card-header">
-        <img class="track-card-icon" src="https://oldschool.runescape.wiki/images/${hardwoodTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
+        <img class="track-card-icon" src="icons/${hardwoodTier.name}_sapling.png" onerror="this.style.display='none'" alt="">
         <div>
           <div class="track-card-name">${hardwoodTier.name} Trees</div>
           <div class="track-card-level">Requires Lvl ${hardwoodTier.level}</div>
@@ -1822,7 +1837,7 @@ function generatePlan(){
     totalHerbProfitPerRun += (herbRevenue - herbSeedCost - herbUltraCost) * herbPatches;
     html += `<div class="track-card" style="--accent:${accent};">
       <div class="track-card-header">
-        <img class="track-card-icon" src="https://oldschool.runescape.wiki/images/${herbTier.name.replace(' ','_')}_seed.png" onerror="this.style.display='none'" alt="">
+        <img class="track-card-icon" src="${herbSeedIcon(herbTier.name)}" onerror="this.style.display='none'" alt="">
         <div>
           <div class="track-card-name">${herbTier.name}</div>
           <div class="track-card-level">Requires Lvl ${herbTier.level}</div>

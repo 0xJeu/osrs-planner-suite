@@ -408,18 +408,18 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
   <!-- SITE NAV -->
   <nav class="skill-nav">
     <div class="skill-nav-title">OSRS Tools</div>
-    <button class="skill-btn active"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Grand_Exchange_logo.png" alt="">GE Tracker</button>
-    <button class="skill-btn" onclick="location.href='osrs-skill-profit.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Coins_10000.png" alt="">Skill Profits</button>
+    <button class="skill-btn active"><img class="skill-icon-img" src="icons/Grand_Exchange_logo.png" alt="">GE Tracker</button>
+    <button class="skill-btn" onclick="location.href='osrs-skill-profit.html'"><img class="skill-icon-img" src="icons/Coins_10000.png" alt="">Skill Profits</button>
     <div class="skill-sep"></div>
-    <button class="skill-btn" onclick="location.href='osrs-training-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Construction_icon.png" alt="">Construction</button>
-    <button class="skill-btn" onclick="location.href='osrs-farming-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Farming_icon.png" alt="">Farming</button>
-    <button class="skill-btn" onclick="location.href='osrs-herblore-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Herblore_icon.png" alt="">Herblore</button>
-    <button class="skill-btn" onclick="location.href='osrs-prayer-planner.html'"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Prayer_icon.png" alt="">Prayer</button>
+    <button class="skill-btn" onclick="location.href='osrs-training-planner.html'"><img class="skill-icon-img" src="icons/Construction_icon.png" alt="">Construction</button>
+    <button class="skill-btn" onclick="location.href='osrs-farming-planner.html'"><img class="skill-icon-img" src="icons/Farming_icon.png" alt="">Farming</button>
+    <button class="skill-btn" onclick="location.href='osrs-herblore-planner.html'"><img class="skill-icon-img" src="icons/Herblore_icon.png" alt="">Herblore</button>
+    <button class="skill-btn" onclick="location.href='osrs-prayer-planner.html'"><img class="skill-icon-img" src="icons/Prayer_icon.png" alt="">Prayer</button>
     <div class="skill-sep"></div>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Smithing_icon.png" alt="">Smithing<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Fletching_icon.png" alt="">Fletching<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Cooking_icon.png" alt="">Cooking<span class="soon-badge">Soon</span></button>
-    <button class="skill-btn disabled"><img class="skill-icon-img" src="https://oldschool.runescape.wiki/images/Crafting_icon.png" alt="">Crafting<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Smithing_icon.png" alt="">Smithing<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Fletching_icon.png" alt="">Fletching<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Cooking_icon.png" alt="">Cooking<span class="soon-badge">Soon</span></button>
+    <button class="skill-btn disabled"><img class="skill-icon-img" src="icons/Crafting_icon.png" alt="">Crafting<span class="soon-badge">Soon</span></button>
   </nav>
   <!-- SIDEBAR -->
   <div class="sidebar">
@@ -1509,8 +1509,33 @@ async function refreshPrices(manual){
   }
 }
 document.getElementById('refreshBtn').addEventListener('click',()=>refreshPrices(true));
+// Background price polling, gated on tab visibility.
+//
+// This used to be an unconditional `setInterval(refreshPrices, 60s)` that ran forever,
+// including in a background tab nobody was looking at. Each tick pulls the full /latest
+// dump (~73 KB gzipped, every tradeable item), so a tab left open all day was ~105 MB/day
+// of someone else's bandwidth to render prices onto a screen that wasn't on screen.
+// The OSRS Wiki runs that API on donations and volunteer time; polling it for a hidden
+// tab is pure waste, and it's the kind of thing that's merely rude at one user and a
+// real problem at ten thousand.
+//
+// So: skip ticks while hidden, and on return refresh once if what's displayed has
+// actually gone stale. Net effect for the user is identical - prices are current
+// whenever they're looking at them.
+const PRICE_REFRESH_MS=60_000;
 function startAlertChecker(){
-  setInterval(()=>refreshPrices(false),60_000);
+  setInterval(()=>{
+    if(document.visibilityState!=='visible')return;
+    refreshPrices(false);
+  },PRICE_REFRESH_MS);
+
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState!=='visible')return;
+    // Only catch up if we actually missed a tick while hidden.
+    if(!lastUpdated||Date.now()-lastUpdated.getTime()>=PRICE_REFRESH_MS){
+      refreshPrices(false);
+    }
+  });
 }
 
 // ── DRAWING TOOLS & CHART ENGINE ─────────────────────────
