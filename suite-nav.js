@@ -1,15 +1,18 @@
 (() => {
+  // Nav icons are served from icons/, not hotlinked from oldschool.runescape.wiki. This
+  // script runs on every page, so each hotlink here was a wiki request on every page view.
+  // Paths are relative to the page, and every page lives at the site root.
   const tools = [
-    {name:'GE Tracker',group:'Market tool',description:'Watch prices and flips',file:'osrs-ge-tracker.html',icon:'https://oldschool.runescape.wiki/images/Grand_Exchange_logo.png'},
-    {name:'Skill Profits',group:'Market tool',description:'Compare skilling profit',file:'osrs-skill-profit.html',icon:'https://oldschool.runescape.wiki/images/Coins_10000.png'},
-    {name:'Construction',group:'Training planner',description:'Levels, materials, cost',file:'osrs-training-planner.html',icon:'https://oldschool.runescape.wiki/images/Construction_icon.png'},
-    {name:'Farming',group:'Training planner',description:'Runs, patches, inventory',file:'osrs-farming-planner.html',icon:'https://oldschool.runescape.wiki/images/Farming_icon.png'},
-    {name:'Herblore',group:'Training planner',description:'Routes and live costs',file:'osrs-herblore-planner.html',icon:'https://oldschool.runescape.wiki/images/Herblore_icon.png'},
-    {name:'Prayer',group:'Training planner',description:'Methods and bone costs',file:'osrs-prayer-planner.html',icon:'https://oldschool.runescape.wiki/images/Prayer_icon.png'},
-    {name:'Crafting',group:'Training planner',description:'Gems, dragonhide, and more',file:'osrs-crafting-planner.html',icon:'https://oldschool.runescape.wiki/images/Crafting_icon.png'},
-    {name:'Smithing',group:'Training planner',description:'Anvils, Blast Furnace, Foundry',file:'osrs-smithing-planner.html',icon:'https://oldschool.runescape.wiki/images/Smithing_icon.png'},
-    {name:'Cooking',group:'Training planner',description:'Burn-aware routes and locations',file:'osrs-cooking-planner.html',icon:'https://oldschool.runescape.wiki/images/Cooking_icon.png'},
-    {name:'Fletching',group:'Training planner',description:'Bows, darts, and Vale Totems',file:'osrs-fletching-planner.html',icon:'https://oldschool.runescape.wiki/images/Fletching_icon.png'}
+    {name:'GE Tracker',group:'Market tool',description:'Watch prices and flips',file:'osrs-ge-tracker.html',icon:'icons/Grand_Exchange_logo.png'},
+    {name:'Skill Profits',group:'Market tool',description:'Compare skilling profit',file:'osrs-skill-profit.html',icon:'icons/Coins_10000.png'},
+    {name:'Construction',group:'Training planner',description:'Levels, materials, cost',file:'osrs-training-planner.html',icon:'icons/Construction_icon.png'},
+    {name:'Farming',group:'Training planner',description:'Runs, patches, inventory',file:'osrs-farming-planner.html',icon:'icons/Farming_icon.png'},
+    {name:'Herblore',group:'Training planner',description:'Routes and live costs',file:'osrs-herblore-planner.html',icon:'icons/Herblore_icon.png'},
+    {name:'Prayer',group:'Training planner',description:'Methods and bone costs',file:'osrs-prayer-planner.html',icon:'icons/Prayer_icon.png'},
+    {name:'Crafting',group:'Training planner',description:'Gems, dragonhide, and more',file:'osrs-crafting-planner.html',icon:'icons/Crafting_icon.png'},
+    {name:'Smithing',group:'Training planner',description:'Anvils, Blast Furnace, Foundry',file:'osrs-smithing-planner.html',icon:'icons/Smithing_icon.png'},
+    {name:'Cooking',group:'Training planner',description:'Burn-aware routes and locations',file:'osrs-cooking-planner.html',icon:'icons/Cooking_icon.png'},
+    {name:'Fletching',group:'Training planner',description:'Bows, darts, and Vale Totems',file:'osrs-fletching-planner.html',icon:'icons/Fletching_icon.png'}
   ];
   const currentFile=(location.pathname.split('/').pop()||'index.html').toLowerCase();
   const currentIndex=tools.findIndex(tool=>tool.file===currentFile);

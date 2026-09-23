@@ -40,7 +40,7 @@ mapData.forEach(i => { nameToId[i.name.toLowerCase()] = String(i.id); });
 mapData.forEach(i => { nameToId[i.name.toLowerCase()] = i.id; }); // number vs string mismatch!
 ```
 
-**Do NOT send a custom User-Agent header** — browsers block this on cross-origin fetch, causing silent CORS preflight failures.
+**User-Agent header:** the prices API *does* accept one — verified 2026-09-23, its preflight answers `204` with `access-control-allow-headers: user-agent` and caches that approval for 24h (`access-control-max-age: 86400`). The wiki actually asks callers to identify themselves, so `osrs-ge-tracker.html`'s `H` header is fine. (An earlier version of this line said browsers block it and cause silent CORS failures; that was wrong.) The real cost is that a non-safelisted header forces a preflight **per distinct URL** — negligible for the fixed `/latest` URL, but it doubles the request count for anything that walks many URLs, like the `/5m?timestamp=` backfill.
 
 **GE Tax:** `sellPriceOf()` deducts 1% GE tax: `Math.min(5000000, Math.max(1, Math.floor(price * 0.01)))`.
 
@@ -48,7 +48,11 @@ mapData.forEach(i => { nameToId[i.name.toLowerCase()] = i.id; }); // number vs s
 - `high` = instant buy price (what buyers pay) — use when calculating ingredient costs
 - `low` = instant sell price (what sellers receive) — use when calculating sell revenue, then deduct 1% tax
 
-**Icon URLs:** Use the `icon` field from the mapping API, not item IDs:
+**Icons — bundle anything you can enumerate; never hotlink it.** Nav, skill, account-badge, sapling, seed, coin, and checkbox icons are committed under `icons/` and referenced by relative path (`icons/Farming_icon.png`). Every page and `suite-nav.js` used to hotlink these from `oldschool.runescape.wiki/images/`, costing the wiki a request per icon per page view; one checkbox icon (`Myths_Guild.png`) was a 1500×1000, 508 KB scene render shown at 24px. To add one: download it once, downscale to ~2× its rendered size, give it a plain ASCII filename (no `%`-encoding — the `src` and the file on disk must agree), commit it.
+
+Don't derive icon filenames from display names — look them up. Herb seeds are the cautionary tale: the planner calls a herb "Ranarr weed" but the seed item is "Ranarr seed" and its file is `Ranarr_seed_5.png`, so a `${name}_seed.png` template 404'd on all fourteen herbs.
+
+Only **data-driven** item icons — names that come from the mapping API at runtime for whatever items a plan contains — still load from the wiki, since they can't be pre-bundled. Use the mapping API's `icon` field, not item IDs, and give the `<img>` `loading="lazy"`:
 ```js
 nameToIcon[i.name.toLowerCase()] = i.icon; // e.g. "Varrock teleport.png"
 // URL: https://oldschool.runescape.wiki/images/{filename.replace(/ /g,'_')}
